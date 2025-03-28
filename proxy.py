@@ -17,3 +17,6 @@ serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 serverSocket.bind((proxyHost, proxyPort)) 
 serverSocket.listen(5)
+while True:
+    clientSocket, clientAddress = serverSocket.accept()
+    print('Connected to', clientAddress)
