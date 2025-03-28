@@ -44,17 +44,24 @@ while True:
 # Accept connection from client and store in the clientSocket
    try:
        clientSocket, clientAddress = serverSocket.accept()
-        print('Received a connection')
+       print('Received a connection')
     except:
-        print('Failed to accept connection')
-        sys.exit()
+       print('Failed to accept connection')
+       sys.exit()
 # Get HTTP request from client
-# and store it in the variable: message_bytes
-# ~~~~ INSERT CODE ~~~~
-# ~~~~ END CODE INSERT ~~~~
-message = message_bytes.decode('utf-8')
-print ('Received request:')
-print ('< ' + message)
+    try:
+        message_bytes = clientSocket.recv(4096)  
+        print('Failed to receive data')
+        clientSocket.close()
+        continue
+    try:
+        message = message_bytes.decode('utf-8')
+        print ('Received request:')
+    except:
+        print('Failed to decode message')
+        clientSocket.close()
+        continue
+    print ('< ' + message)
 # Extract the method, URI and version of the HTTP client request
 requestParts = message.split()
 method = requestParts[0]
