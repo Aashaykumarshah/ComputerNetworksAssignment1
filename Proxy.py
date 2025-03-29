@@ -1,9 +1,11 @@
+# Include the libraries for socket and system calls
 import socket
 import sys
 import os
 import argparse
 import re
 
+# 1MB buffer size
 BUFFER_SIZE = 1000000
 
 parser = argparse.ArgumentParser()
@@ -89,12 +91,14 @@ while True:
         cacheLocation = cacheLocation + 'default'
 
     print ('Cache location:\t\t' + cacheLocation)
-
     fileExists = os.path.isfile(cacheLocation)
+
+    # Read from cache
     cacheFile = open(cacheLocation, "rb")
     cacheData = cacheFile.read()
-
     print ('Cache hit! Loading from cache file: ' + cacheLocation)
+
+    # Send response to client
     clientSocket.sendall(cacheData)
     cacheFile.close()
     print ('Sent to the client (from cache).')
@@ -104,16 +108,17 @@ while True:
     try:
       originServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       print ('Connecting to:\t\t' + hostname + '\n')
+
       address = socket.gethostbyname(hostname)
       originServerSocket.connect((address, 80))
       print ('Connected to origin Server')
 
+      originServerRequest = ''
+      originServerRequestHeader = ''
       originServerRequest = f"{method} {resource} {version}"
       originServerRequestHeader = (
-          f"Host: {hostname}\r\n"
-          "User-Agent: Mozilla/5.0\r\n"
-          "Accept: */*\r\n"
-          "Connection: close"
+        f"Host: {hostname}\r\n"
+        "Connection: close"
       )
 
       request = originServerRequest + '\r\n' + originServerRequestHeader + '\r\n\r\n'
@@ -152,7 +157,7 @@ while True:
         clientSocket.close()
         continue
 
-      # Send to client
+      # Send response to client
       clientSocket.sendall(response_data)
 
       # Save to cache
@@ -166,6 +171,7 @@ while True:
 
       print ('origin response received. Closing sockets')
       originServerSocket.close()
+
     except OSError as err:
       print ('origin server request failed. ' + err.strerror)
 
