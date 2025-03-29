@@ -63,54 +63,66 @@ while True:
         continue
     print ('< ' + message)
 # Extract the method, URI and version of the HTTP client request
-requestParts = message.split()
-method = requestParts[0]
-URI = requestParts[1]
-version = requestParts[2]
-print ('Method:\t\t' + method)
-print ('URI:\t\t' + URI)
-print ('Version:\t' + version)
-print ('')
+    requestParts = message.split()
+    if len(requestParts) < 3:
+        print('Invalid request')
+        clientSocket.close()
+        continue
+    method = requestParts[0]
+    URI = requestParts[1]
+    version = requestParts[2]
+    print ('Method:\t\t' + method)
+    print ('URI:\t\t' + URI)
+    print ('Version:\t' + version)
+    print ('')
 # Get the requested resource from URI
 # Remove http protocol from the URI
-URI = re.sub('^(/?)http(s?)://', '', URI, count=1)
+    URI = re.sub('^(/?)http(s?)://', '', URI, count=1)
 # Remove parent directory changes - security
-URI = URI.replace('/..', '')
+    URI = URI.replace('/..', '')
 # Split hostname from resource name
-resourceParts = URI.split('/', 1)
-hostname = resourceParts[0]
-resource = '/'
-if len(resourceParts) == 2:
+    resourceParts = URI.split('/', 1)
+    hostname = resourceParts[0]
+    resource = '/'
+    if len(resourceParts) == 2:
 # Resource is absolute URI with hostname and resource
-resource = resource + resourceParts[1]
-print ('Requested Resource:\t' + resource)
+         resource = resource + resourceParts[1]
+    print ('Requested Resource:\t' + resource)
 # Check if resource is in cache
-try:
-cacheLocation = './' + hostname + resource
-if cacheLocation.endswith('/'):
-cacheLocation = cacheLocation + 'default'
-print ('Cache location:\t\t' + cacheLocation)
-fileExists = os.path.isfile(cacheLocation)
+    try:
+        cacheLocation = './' + hostname + resource
+        if cacheLocation.endswith('/'):
+            cacheLocation = cacheLocation + 'default'
+        print ('Cache location:\t\t' + cacheLocation)
+        fileExists = os.path.isfile(cacheLocation)
 # Check wether the file is currently in the cache
-cacheFile = open(cacheLocation, "r")
-cacheData = cacheFile.readlines()
-print ('Cache hit! Loading from cache file: ' + cacheLocation)
+        cacheFile = open(cacheLocation, "r")
+        cacheData = cacheFile.readlines()
+        print ('Cache hit! Loading from cache file: ' + cacheLocation)
 # ProxyServer finds a cache hit
 # Send back response to client
-# ~~~~ INSERT CODE ~~~~
-# ~~~~ END CODE INSERT ~~~~
-cacheFile.close()
-print ('Sent to the client:')
-print ('> ' + cacheData)
-except:
+    try:
+        if os.path.isfile(cacheLocation):
+            with open(cacheLocation, 'r') as cacheFile:
+                cacheData = cacheFile.readlines()
+            print('Cache hit! Sending from cache...')
+            for line in cacheData:
+                clientSocket.sendall(line.encode()) 
+            clientSocket.close()
+            continue
+     except:
+        print('Cache miss or error reading cache.')
 # cache miss. Get resource from origin server
-originServerSocket = None
-# Create a socket to connect to origin server
-# and store in originServerSocket
-# ~~~~ INSERT CODE ~~~~
-# ~~~~ END CODE INSERT ~~~~
-print ('Connecting to:\t\t' + hostname + '\n')
-try:
+    try:
+        originServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        address = socket.gethostbyname(hostname)
+        originServerSocket.connect((address, 80))  
+    except:
+        print('Failed to connect to origin server')
+        clientSocket.close()
+        continue
+
+    originRequest = f"{method} {resource} {version}\r\nHost: {hostname}\r\n\r\n"
 # Get the IP address for a hostname
 address = socket.gethostbyname(hostname)
 # Connect to the origin server
