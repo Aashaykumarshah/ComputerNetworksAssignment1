@@ -56,8 +56,12 @@ while True:
 
   # Get HTTP request from client
   # and store it in the variable: message_bytes
-  # ~~~~ INSERT CODE ~~~~
-  # ~~~~ END CODE INSERT ~~~~
+  try:
+    message_bytes = clientSocket.recv(4096) 
+  except:
+    print('Failed to receive data from client')
+    clientSocket.close()
+    continue
   message = message_bytes.decode('utf-8')
   print ('Received request:')
   print ('< ' + message)
@@ -108,18 +112,16 @@ while True:
     print ('Cache hit! Loading from cache file: ' + cacheLocation)
     # ProxyServer finds a cache hit
     # Send back response to client 
-    # ~~~~ INSERT CODE ~~~~
-    # ~~~~ END CODE INSERT ~~~~
+    clientSocket.sendall(cacheData)  # ~~~~ INSERT CODE ~~~~
     cacheFile.close()
-    print ('Sent to the client:')
-    print ('> ' + cacheData)
+    print ('Sent to the client.')
   except:
     # cache miss.  Get resource from origin server
     originServerSocket = None
     # Create a socket to connect to origin server
     # and store in originServerSocket
-    # ~~~~ INSERT CODE ~~~~
-    # ~~~~ END CODE INSERT ~~~~
+    try:
+      originServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     print ('Connecting to:\t\t' + hostname + '\n')
     try:
