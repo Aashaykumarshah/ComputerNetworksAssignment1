@@ -46,13 +46,13 @@ while True:
   clientSocket = None
 
   # Accept connection from client and store in the clientSocket
-  try:
-    # ~~~~ INSERT CODE ~~~~
-    # ~~~~ END CODE INSERT ~~~~
+   try:
+    clientSocket, clientAddress = serverSocket.accept()  
     print ('Received a connection')
   except:
     print ('Failed to accept connection')
     sys.exit()
+
 
   # Get HTTP request from client
   # and store it in the variable: message_bytes
