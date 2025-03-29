@@ -1,3 +1,4 @@
+# http_proxy_server.py
 import socket
 import sys
 import os
@@ -14,80 +15,100 @@ proxyHost = args.hostname
 proxyPort = int(args.port)
 
 try:
-  serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-  print('Created socket')
+    serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print('Created socket')
 except:
-  print('Failed to create socket')
-  sys.exit()
-
-try:
-  serverSocket.bind((proxyHost, proxyPort))
-  print('Port is bound')
-except:
-  print('Port is already in use')
-  sys.exit()
-
-try:
-  serverSocket.listen(5)
-  print('Listening to socket')
-except:
-  print('Failed to listen')
-  sys.exit()
-
-while True:
-  print('\nProxy ready for connections...')
-  clientSocket = None
-
-  try:
-    clientSocket, addr = serverSocket.accept()
-    print('Received a connection from:', addr)
-  except:
-    print('Failed to accept connection')
+    print('Failed to create socket')
     sys.exit()
 
-  try:
-    message_bytes = clientSocket.recv(4096)
-    print('Received raw request (first 200 bytes):')
-    print(message_bytes[:200])
-  except:
-    print('Failed to receive data from client')
-    clientSocket.close()
-    continue
+try:
+    serverSocket.bind((proxyHost, proxyPort))
+    print('Port is bound')
+except:
+    print('Port is already in use')
+    sys.exit()
 
-  message = message_bytes.decode('utf-8', errors='ignore')
-  print('Full decoded request:')
-  print('< ' + message)
+try:
+    serverSocket.listen(10)
+    print('Listening to socket')
+except:
+    print('Failed to listen')
+    sys.exit()
 
-  requestParts = message.split()
-  if len(requestParts) < 3:
-    print('Invalid HTTP request')
-    clientSocket.close()
-    continue
+while True:
+    print('Waiting for connection...')
+    try:
+        clientSocket, _ = serverSocket.accept()
+        print('Received a connection')
+    except:
+        print('Failed to accept connection')
+        continue
 
-  method = requestParts[0]
-  URI = requestParts[1]
-  version = requestParts[2]
+    try:
+        message_bytes = clientSocket.recv(BUFFER_SIZE)
+        message = message_bytes.decode('utf-8')
+        print('< ' + message)
+    except:
+        clientSocket.close()
+        continue
 
-  print('Method:\t' + method)
-  print('URI:\t' + URI)
-  print('Version:\t' + version)
+    requestParts = message.split()
+    if len(requestParts) < 3:
+        clientSocket.close()
+        continue
 
-  URI = re.sub('^(/?)http(s?)://', '', URI, count=1)
-  URI = URI.replace('/..', '')
+    method, URI, version = requestParts[:3]
 
-  resourceParts = URI.split('/', 1)
-  hostname = resourceParts[0]
-  resource = '/' + resourceParts[1] if len(resourceParts) == 2 else '/'
+    URI = re.sub('^(/?)http(s?)://', '', URI, count=1)
+    URI = URI.replace('/..', '')
+    resourceParts = URI.split('/', 1)
+    hostname = resourceParts[0]
+    resource = '/' + resourceParts[1] if len(resourceParts) == 2 else '/'
 
-  print('Hostname:\t' + hostname)
-  print('Resource:\t' + resource)
-
-  try:
     cacheLocation = './' + hostname + resource
     if cacheLocation.endswith('/'):
-        cacheLocation = cacheLocation + 'default'
+        cacheLocation += 'default'
 
-    print('Cache path:\t' + cacheLocation)
+    print('Cache location:		' + cacheLocation)
+    fileExists = os.path.isfile(cacheLocation)
 
-    cacheFile = open
+    if fileExists:
+        try:
+            with open(cacheLocation, 'rb') as cacheFile:
+                cacheData = cacheFile.read()
+                clientSocket.sendall(cacheData)
+                print('Sent to the client: (from cache)')
+        except Exception as e:
+            print('Cache read error:', e)
+    else:
+        try:
+            originServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            address = socket.gethostbyname(hostname)
+            originServerSocket.connect((address, 80))
+            print('Connected to origin Server')
+
+            originRequest = f"GET {resource} HTTP/1.1\r\nHost: {hostname}\r\nConnection: close\r\n\r\n"
+            originServerSocket.sendall(originRequest.encode())
+
+            response = b''
+            while True:
+                data = originServerSocket.recv(BUFFER_SIZE)
+                if not data:
+                    break
+                response += data
+
+            clientSocket.sendall(response)
+
+            cacheDir = os.path.dirname(cacheLocation)
+            if not os.path.exists(cacheDir):
+                os.makedirs(cacheDir)
+            with open(cacheLocation, 'wb') as cacheFile:
+                cacheFile.write(response)
+
+            originServerSocket.close()
+            clientSocket.shutdown(socket.SHUT_WR)
+            print('Origin response sent and cached')
+        except Exception as e:
+            print('Origin server request failed:', e)
+
+    clientSocket.close()
