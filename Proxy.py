@@ -128,12 +128,12 @@ while True:
       # Get the IP address for a hostname
       address = socket.gethostbyname(hostname)
       # Connect to the origin server
-      # ~~~~ INSERT CODE ~~~~
-      # ~~~~ END CODE INSERT ~~~~
+      address = socket.gethostbyname(hostname)
+      originServerSocket.connect((address, 80)) 
       print ('Connected to origin Server')
 
-      originServerRequest = ''
-      originServerRequestHeader = ''
+      originServerRequest = f"{method} {resource} {version}"
+      originServerRequestHeader = f"Host: {hostname}\r\nConnection: close"
       # Create origin server request line and headers to send
       # and store in originServerRequestHeader and originServerRequest
       # originServerRequest is the first line in the request and
@@ -158,12 +158,16 @@ while True:
       print('Request sent to origin server\n')
 
       # Get the response from the origin server
-      # ~~~~ INSERT CODE ~~~~
-      # ~~~~ END CODE INSERT ~~~~
+      response_data = b''
+      while True:
+        data = originServerSocket.recv(BUFFER_SIZE)
 
       # Send the response to the client
-      # ~~~~ INSERT CODE ~~~~
-      # ~~~~ END CODE INSERT ~~~~
+      if not data:
+          break
+        response_data += data
+
+      clientSocket.sendall(response_data)
 
       # Create a new file in the cache for the requested file.
       cacheDir, file = os.path.split(cacheLocation)
@@ -173,8 +177,7 @@ while True:
       cacheFile = open(cacheLocation, 'wb')
 
       # Save origin server response in the cache file
-      # ~~~~ INSERT CODE ~~~~
-      # ~~~~ END CODE INSERT ~~~~
+      cacheFile.write(response_data)
       cacheFile.close()
       print ('cache file closed')
 
