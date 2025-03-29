@@ -1,0 +1,180 @@
+import socket
+import sys
+import os
+import argparse
+
+
+# 1MB buffer size
+BUFFER_SIZE = 1000000
+parser = argparse.ArgumentParser()
+parser.add_argument('hostname', help='the IP Address Of Proxy Server')
+parser.add_argument('port', help='the port number of the proxy server')
+args = parser.parse_args()
+
+proxyHost = args.hostname
+proxyPort = args.port
+serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+serverSocket.bind((proxyHost, proxyPort)) 
+serverSocket.listen(5)
+# Create a server socket, bind it to a port and start listening
+try:
+# Create a server socket
+   serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+   print ('Created socket')
+except:
+   print ('Failed to create socket')
+   sys.exit()
+try:
+    serverSocket.bind((proxyHost, proxyPort)) 
+    print('Port is bound')
+except:
+    print('Port is already in use')
+    sys.exit()
+try:
+    serverSocket.listen(5)  # reasonable queue size
+    print('Listening to socket')
+except:
+    print('Failed to listen')
+    sys.exit()
+# continuously accept connections
+while True:
+   print ('Waiting for connection...')
+   clientSocket = None
+# Accept connection from client and store in the clientSocket
+   try:
+       clientSocket, clientAddress = serverSocket.accept()
+       print('Received a connection')
+    except:
+       print('Failed to accept connection')
+       sys.exit()
+# Get HTTP request from client
+    try:
+        message_bytes = clientSocket.recv(4096)  
+        print('Failed to receive data')
+        clientSocket.close()
+        continue
+    try:
+        message = message_bytes.decode('utf-8')
+        print ('Received request:')
+    except:
+        print('Failed to decode message')
+        clientSocket.close()
+        continue
+    print ('< ' + message)
+# Extract the method, URI and version of the HTTP client request
+    requestParts = message.split()
+    if len(requestParts) < 3:
+        print('Invalid request')
+        clientSocket.close()
+        continue
+    method = requestParts[0]
+    URI = requestParts[1]
+    version = requestParts[2]
+    print ('Method:\t\t' + method)
+    print ('URI:\t\t' + URI)
+    print ('Version:\t' + version)
+    print ('')
+# Get the requested resource from URI
+# Remove http protocol from the URI
+    URI = re.sub('^(/?)http(s?)://', '', URI, count=1)
+# Remove parent directory changes - security
+    URI = URI.replace('/..', '')
+# Split hostname from resource name
+    resourceParts = URI.split('/', 1)
+    hostname = resourceParts[0]
+    resource = '/'
+    if len(resourceParts) == 2:
+# Resource is absolute URI with hostname and resource
+         resource = resource + resourceParts[1]
+    print ('Requested Resource:\t' + resource)
+# Check if resource is in cache
+    try:
+        cacheLocation = './' + hostname + resource
+        if cacheLocation.endswith('/'):
+            cacheLocation = cacheLocation + 'default'
+        print ('Cache location:\t\t' + cacheLocation)
+        fileExists = os.path.isfile(cacheLocation)
+# Check wether the file is currently in the cache
+        cacheFile = open(cacheLocation, "r")
+        cacheData = cacheFile.readlines()
+        print ('Cache hit! Loading from cache file: ' + cacheLocation)
+# ProxyServer finds a cache hit
+# Send back response to client
+    try:
+        if os.path.isfile(cacheLocation):
+            with open(cacheLocation, 'r') as cacheFile:
+                cacheData = cacheFile.readlines()
+            print('Cache hit! Sending from cache...')
+            for line in cacheData:
+                clientSocket.sendall(line.encode()) 
+            clientSocket.close()
+            continue
+     except:
+        print('Cache miss or error reading cache.')
+# cache miss. Get resource from origin server
+    try:
+        originServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        address = socket.gethostbyname(hostname)
+        originServerSocket.connect((address, 80))  
+    except:
+        print('Failed to connect to origin server')
+        clientSocket.close()
+        continue
+
+    originRequest = f"{method} {resource} {version}\r\nHost: {hostname}\r\n\r\n"
+# Get the IP address for a hostname
+address = socket.gethostbyname(hostname)
+# Connect to the origin server
+# ~~~~ INSERT CODE ~~~~
+# ~~~~ END CODE INSERT ~~~~
+print ('Connected to origin Server')
+originServerRequest = ''
+originServerRequestHeader = ''
+# Create origin server request line and headers to send
+# and store in originServerRequestHeader and originServerRequest
+# originServerRequest is the first line in the request and
+# originServerRequestHeader is the second line in the request
+# ~~~~ INSERT CODE ~~~~
+# ~~~~ END CODE INSERT ~~~~
+# Construct the request to send to the origin server
+request = originServerRequest + '\r\n' + originServerRequestHeader + '\r\n\r\
+n'
+# Request the web resource from origin server
+print ('Forwarding request to origin server:')
+for line in request.split('\r\n'):
+print ('> ' + line)
+try:
+originServerSocket.sendall(request.encode())
+except socket.error:
+print ('Forward request to origin failed')
+sys.exit()
+print('Request sent to origin server\n')
+# Get the response from the origin server
+# ~~~~ INSERT CODE ~~~~
+# ~~~~ END CODE INSERT ~~~~
+# Send the response to the client
+# ~~~~ INSERT CODE ~~~~
+# ~~~~ END CODE INSERT ~~~~
+# Create a new file in the cache for the requested file.
+cacheDir, file = os.path.split(cacheLocation)
+print ('cached directory ' + cacheDir)
+if not os.path.exists(cacheDir):
+os.makedirs(cacheDir)
+cacheFile = open(cacheLocation, 'wb')
+# Save origin server response in the cache file
+# ~~~~ INSERT CODE ~~~~
+# ~~~~ END CODE INSERT ~~~~
+cacheFile.close()
+print ('cache file closed')
+# finished communicating with origin server - shutdown socket writes
+print ('origin response received. Closing sockets')
+originServerSocket.close()
+clientSocket.shutdown(socket.SHUT_WR)
+print ('client socket shutdown for writing')
+except OSError as err:
+print ('origin server request failed. ' + err.strerror)
+try:
+clientSocket.close()
+except:
+print ('Failed to close client socket')
