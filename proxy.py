@@ -45,29 +45,29 @@ while True:
    try:
        clientSocket, clientAddress = serverSocket.accept()
        print('Received a connection')
-    except:
+   except:
        print('Failed to accept connection')
        sys.exit()
 # Get HTTP request from client
-    try:
-        message_bytes = clientSocket.recv(4096)  
-        print('Failed to receive data')
-        clientSocket.close()
-        continue
-    try:
-        message = message_bytes.decode('utf-8')
-        print ('Received request:')
-    except:
-        print('Failed to decode message')
-        clientSocket.close()
-        continue
-    print ('< ' + message)
+   try:
+       message_bytes = clientSocket.recv(4096)  
+       print('Failed to receive data')
+       clientSocket.close()
+       continue
+   try:
+       message = message_bytes.decode('utf-8')
+       print ('Received request:')
+   except:
+       print('Failed to decode message')
+       clientSocket.close()
+       continue
+   print ('< ' + message)
 # Extract the method, URI and version of the HTTP client request
-    requestParts = message.split()
-    if len(requestParts) < 3:
-        print('Invalid request')
-        clientSocket.close()
-        continue
+   requestParts = message.split()
+   if len(requestParts) < 3:
+       print('Invalid request')
+       clientSocket.close()
+       continue
     method = requestParts[0]
     URI = requestParts[1]
     version = requestParts[2]
@@ -124,57 +124,51 @@ while True:
 
     originRequest = f"{method} {resource} {version}\r\nHost: {hostname}\r\n\r\n"
 # Get the IP address for a hostname
-address = socket.gethostbyname(hostname)
-# Connect to the origin server
-# ~~~~ INSERT CODE ~~~~
-# ~~~~ END CODE INSERT ~~~~
-print ('Connected to origin Server')
-originServerRequest = ''
-originServerRequestHeader = ''
+    try:
+        originServerSocket.sendall(originRequest.encode())  # ❌ BUG: should use sendall() and encode()
+    except:
+        print('Failed to send request to origin')
+        originServerSocket.close()
+        clientSocket.close()
+        continue
 # Create origin server request line and headers to send
 # and store in originServerRequestHeader and originServerRequest
 # originServerRequest is the first line in the request and
 # originServerRequestHeader is the second line in the request
-# ~~~~ INSERT CODE ~~~~
-# ~~~~ END CODE INSERT ~~~~
-# Construct the request to send to the origin server
-request = originServerRequest + '\r\n' + originServerRequestHeader + '\r\n\r\
-n'
-# Request the web resource from origin server
-print ('Forwarding request to origin server:')
-for line in request.split('\r\n'):
-print ('> ' + line)
-try:
-originServerSocket.sendall(request.encode())
-except socket.error:
-print ('Forward request to origin failed')
-sys.exit()
-print('Request sent to origin server\n')
+    try:
+        originResponse = b''
+        while True:
+            chunk = originServerSocket.recv(BUFFER_SIZE)
+            if len(chunk) <= 0:
+                break
+            originResponse += chunk
+    except:
+        print('Error receiving from origin server')
+
 # Get the response from the origin server
-# ~~~~ INSERT CODE ~~~~
-# ~~~~ END CODE INSERT ~~~~
-# Send the response to the client
-# ~~~~ INSERT CODE ~~~~
-# ~~~~ END CODE INSERT ~~~~
+    try:
+        originResponse = b''
+        while True:
+            chunk = originServerSocket.recv(BUFFER_SIZE)
+            if len(chunk) <= 0:
+                break
+            originResponse += chunk
+    except:
+        print('Error receiving from origin server')
+
+    try:
+        clientSocket.sendall(originResponse) 
+    except:
+        print('Failed to send response to client')
 # Create a new file in the cache for the requested file.
-cacheDir, file = os.path.split(cacheLocation)
-print ('cached directory ' + cacheDir)
-if not os.path.exists(cacheDir):
-os.makedirs(cacheDir)
-cacheFile = open(cacheLocation, 'wb')
-# Save origin server response in the cache file
-# ~~~~ INSERT CODE ~~~~
-# ~~~~ END CODE INSERT ~~~~
-cacheFile.close()
-print ('cache file closed')
-# finished communicating with origin server - shutdown socket writes
-print ('origin response received. Closing sockets')
-originServerSocket.close()
-clientSocket.shutdown(socket.SHUT_WR)
-print ('client socket shutdown for writing')
-except OSError as err:
-print ('origin server request failed. ' + err.strerror)
-try:
-clientSocket.close()
-except:
-print ('Failed to close client socket')
+    try:
+        cacheDir, file = os.path.split(cacheLocation)
+        if not os.path.exists(cacheDir):
+            os.makedirs(cacheDir)
+        with open(cacheLocation, 'wb') as cacheFile:  
+            cacheFile.write(originResponse)
+    except:
+        print('Failed to write to cache')
+
+    originServerSocket.close()
+    clientSocket.close()
