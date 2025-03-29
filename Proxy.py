@@ -46,7 +46,7 @@ while True:
   clientSocket = None
 
   # Accept connection from client and store in the clientSocket
-   try:
+  try:
     clientSocket, clientAddress = serverSocket.accept()  
     print ('Received a connection')
   except:
@@ -122,9 +122,8 @@ while True:
     # and store in originServerSocket
     try:
       originServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    print ('Connecting to:\t\t' + hostname + '\n')
-    try:
+      print ('Connecting to:\t\t' + hostname + '\n')
+    
       # Get the IP address for a hostname
       address = socket.gethostbyname(hostname)
       # Connect to the origin server
@@ -165,7 +164,7 @@ while True:
       # Send the response to the client
       if not data:
           break
-        response_data += data
+      response_data += data
 
       clientSocket.sendall(response_data)
 
