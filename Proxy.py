@@ -33,13 +33,12 @@ except:
   sys.exit()
 
 try:
-  # Listen on the server socket
-  # ~~~~ INSERT CODE ~~~~
-  # ~~~~ END CODE INSERT ~~~~
+  serverSocket.listen(5)  # ~~~~ INSERT CODE ~~~~
   print ('Listening to socket')
 except:
   print ('Failed to listen')
   sys.exit()
+
 
 # continuously accept connections
 while True:
