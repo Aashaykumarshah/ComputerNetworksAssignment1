@@ -17,8 +17,9 @@ proxyHost = args.hostname
 proxyPort = int(args.port)
 
 # Create a server socket, bind it to a port and start listening
+# ~~~~ INSERT CODE ~~~~
 try:
-  serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # ~~~~ INSERT CODE ~~~~
+  serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
   serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
   print ('Created socket')
 except:
@@ -32,8 +33,9 @@ except:
   print('Port is already in use')
   sys.exit()
 
+# ~~~~ INSERT CODE ~~~~
 try:
-  serverSocket.listen(5)  # ~~~~ INSERT CODE ~~~~
+  serverSocket.listen(5)  
   print ('Listening to socket')
 except:
   print ('Failed to listen')
